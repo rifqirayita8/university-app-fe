@@ -2,6 +2,7 @@
 import { ref, onMounted, computed } from 'vue';
 import api from '@/utils/api';
 import AlertBox from '@/components/AlertBox.vue';
+import L from 'leaflet';
 
 const criteriaPairs= [
   ["akreditasi", "biaya"],
@@ -31,14 +32,47 @@ const ahpScale = [
 const criteriaWeights= ref<number[]>(Array(criteriaPairs.length).fill(1));
 const userLat= ref<number | null>(null);
 const userLong= ref<number | null>(null);
+const map= ref()
+const mapContainer= ref()
 const locationError= ref(false);
 const formError= ref(false);
 
 const manualLat= ref<string>('');
 const manualLong= ref<string>('');
 
+const manualMarker= ref<L.Marker | null>(null);
+const manualSelectedLatLng= ref<{lat:number, lng:number} | null>(null);
+
 const isLoading= ref(false);
 const resultData= ref<{namaUniversitas: string, skor: number}[]>([]);
+
+onMounted(() => {
+  map.value= L.map(mapContainer.value).setView([51.505, -0.09], 13);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+}).addTo(map.value);
+  
+  map.value.on('click', (e:L.LeafletMouseEvent) => {
+    const {lat, lng} = e.latlng;
+    manualSelectedLatLng.value= {lat, lng};
+
+    if (manualMarker.value) {
+      map.value.removeLayer(manualMarker.value);
+    }
+
+    const marker= L.marker([lat, lng], {
+      draggable: true,
+    }).addTo(map.value);
+
+    marker.on('dragend', () => {
+      const pos= marker.getLatLng();
+      manualSelectedLatLng.value= {lat:pos.lat, lng:pos.lng};
+    });
+
+    manualMarker.value= marker;
+  })
+})
 
 const getLocation= () => {
   navigator.geolocation.getCurrentPosition(
@@ -53,13 +87,24 @@ const getLocation= () => {
   )
 };
 
+const setManualLocation= () => {
+  if (manualSelectedLatLng.value) {
+    userLat.value = manualSelectedLatLng.value.lat;
+    userLong.value = manualSelectedLatLng.value.lng;
+    alert('Lokasi berhasil disimpan!');
+  } else {
+    alert('Silakan pilih lokasi manual terlebih dahulu!');
+  }
+}
+
 onMounted(() => getLocation());
 
-const canSubmit= computed(() => {
-  const lat= userLat.value || parseFloat(manualLat.value);
-  const long= userLong.value || parseFloat(manualLong.value);
-  return !!lat && !!long;
-})
+const canSubmit = computed(() => {
+  const lat = userLat.value ?? parseFloat(manualLat.value);
+  const long = userLong.value ?? parseFloat(manualLong.value);
+  return !isNaN(lat) && !isNaN(long);
+});
+
 
 const submitAHP = async() => {
 
@@ -141,6 +186,18 @@ const submitAHP = async() => {
     >
       Kirim Data AHP
     </button>
+
+    <p>Lokasi saat ini lat: {{ userLat }} dan long: {{ userLong }}</p>
+
+    <div ref="mapContainer" class="mt-6 h-96 w-96 bg-gray-200 rounded"></div>
+
+    <div v-if="manualSelectedLatLng" class="mt-4">
+      <p class="mb-2">Lokasi manual: {{ manualSelectedLatLng.lat.toFixed(6) }}, {{ manualSelectedLatLng.lng.toFixed(6) }}</p>
+      <button class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700" @click="setManualLocation">
+        Set Lokasi Manual ini
+      </button>
+
+    </div>
 
     <div v-if="isLoading" class="mt-4 text-center text-blue-600 font-semibold">
       Menghitung hasil, mohon tunggu...
