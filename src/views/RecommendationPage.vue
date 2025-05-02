@@ -1,52 +1,29 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, nextTick } from 'vue';
 import api from '@/utils/api';
 import AlertBox from '@/components/AlertBox.vue';
 import L from 'leaflet';
-
-const criteriaPairs= [
-  ["akreditasi", "biaya"],
-  ["akreditasi", "passRate"],
-  ["akreditasi", "jarak"],
-  ["akreditasi", "jumlahJurusan"],
-  ["biaya", "passRate"],
-  ["biaya", "jarak"],
-  ["biaya", "jumlahJurusan"],
-  ["passRate", "jarak"],
-  ["passRate", "jumlahJurusan"],
-  ["jarak", "jumlahJurusan"]
-];
-
-const ahpScale = [
-  { value: 1, label: 'Sama penting (1)' },
-  { value: 2, label: 'Antara 1 dan 3 (2)' },
-  { value: 3, label: 'Sedikit lebih penting (3)' },
-  { value: 4, label: 'Antara 3 dan 5 (4)' },
-  { value: 5, label: 'Lebih penting (5)' },
-  { value: 6, label: 'Antara 5 dan 7 (6)' },
-  { value: 7, label: 'Jauh lebih penting (7)' },
-  { value: 8, label: 'Antara 7 dan 9 (8)' },
-  { value: 9, label: 'Ekstrem penting (9)' }
-];
+import { criteriaPairs, ahpScale, ahpStats } from '@/constants/ahp';
 
 const criteriaWeights= ref<number[]>(Array(criteriaPairs.length).fill(1));
 const userLat= ref<number | null>(null);
 const userLong= ref<number | null>(null);
 const map= ref()
 const mapContainer= ref()
+const buttonRef= ref<HTMLElement | null>(null);
 const locationError= ref(false);
 const formError= ref(false);
-
-const manualLat= ref<string>('');
-const manualLong= ref<string>('');
+const crError= ref(false);
 
 const manualMarker= ref<L.Marker | null>(null);
 const manualSelectedLatLng= ref<{lat:number, lng:number} | null>(null);
 
 const isLoading= ref(false);
-const resultData= ref<{namaUniversitas: string, skor: number}[]>([]);
+const resultData= ref<Array<{namaUniversitas: string, skor: number}>>([]);
 
 onMounted(() => {
+  getLocation();
+
   map.value= L.map(mapContainer.value).setView([51.505, -0.09], 13);
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
@@ -60,6 +37,14 @@ onMounted(() => {
     if (manualMarker.value) {
       map.value.removeLayer(manualMarker.value);
     }
+
+    // nextTick(() => {
+    //   if (buttonRef.value) {
+    //     buttonRef.value.scrollIntoView({behavior: 'smooth'});
+    //   }
+    // })
+
+    console.log('buttonRef', buttonRef.value);
 
     const marker= L.marker([lat, lng], {
       draggable: true,
@@ -97,46 +82,44 @@ const setManualLocation= () => {
   }
 }
 
-onMounted(() => getLocation());
-
 const canSubmit = computed(() => {
-  const lat = userLat.value ?? parseFloat(manualLat.value);
-  const long = userLong.value ?? parseFloat(manualLong.value);
-  return !isNaN(lat) && !isNaN(long);
+  const lat = userLat.value 
+  const long = userLong.value
+  return !isNaN(lat!) && !isNaN(long!);
 });
 
-
 const submitAHP = async() => {
-
-  const isAllFilled= criteriaWeights.value.every((w) => !!w);
-
-  if (!isAllFilled) {
-    formError.value= true;
-    return;
-  }
   
   const formattedWeights= criteriaPairs.map(([a, b], i) => [a, b, criteriaWeights.value[i]]);
   const payload= {
     criteriaWeights: formattedWeights,
-    userLat: userLat.value || parseFloat(manualLat.value),
-    userLong: userLong.value || parseFloat(manualLong.value),
+    userLat: userLat.value,
+    userLong: userLong.value,
   };
 
   isLoading.value= true;
   resultData.value= [];
 
   try {
-    const res= await api.post('/ahp/rank', payload);
-    console.log('Response from AHP:', res.data);
+    const ahpRank= await api.post('/ahp/rank', payload);
+    const university= await api.get('/datamaster/universitas');
+    
+    const criteriaRank= ahpRank.data.result.criteriaRankMetaMap
+    ahpStats.value= {
+      consistencyRatio: criteriaRank.cr,
+    }
 
-    const rankedMap= res.data.result.rankedScoreMap;
+    if(ahpStats && ahpStats.value.consistencyRatio > 0.1) {
+      crError.value= true;
+    }
+    const rankedMap= ahpRank.data.result.rankedScoreMap;
     resultData.value= Object.entries(rankedMap).map(([namaUniversitas, skor]) => ({
       namaUniversitas,
       skor: typeof skor === 'number' ? skor : parseFloat(String(skor)) || 0,
     })).sort((a,b) => b.skor - a.skor);
   } catch(err) {
     console.error('Error submitting AHP:', err);
-    alert('Terjadi kesalahan saat mengirim data!');
+    formError.value= true;
   } finally {
     isLoading.value= false;
   }
@@ -157,10 +140,19 @@ const submitAHP = async() => {
 
     <AlertBox
       v-model:show="formError"
-      text="Masih ada perbandingan yang belum diisi!"
+      text="Terjadi Error pada Sistem. Silakan coba lagi."
       type="error"
       closable
     />
+    
+    <div ref="mapContainer" class="mt-6 h-96 w-96 bg-gray-200 rounded"></div>
+
+    <div v-if="manualSelectedLatLng" class="mt-4">
+      <p class="mb-2">Lokasi manual: {{ manualSelectedLatLng.lat.toFixed(6) }}, {{ manualSelectedLatLng.lng.toFixed(6) }}</p>
+      <button ref="buttonRef" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700" @click="setManualLocation">
+        Set Lokasi Manual ini
+      </button>
+    </div>
 
     <div
       v-for="(pair, index) in criteriaPairs"
@@ -187,21 +179,16 @@ const submitAHP = async() => {
       Kirim Data AHP
     </button>
 
-    <p>Lokasi saat ini lat: {{ userLat }} dan long: {{ userLong }}</p>
-
-    <div ref="mapContainer" class="mt-6 h-96 w-96 bg-gray-200 rounded"></div>
-
-    <div v-if="manualSelectedLatLng" class="mt-4">
-      <p class="mb-2">Lokasi manual: {{ manualSelectedLatLng.lat.toFixed(6) }}, {{ manualSelectedLatLng.lng.toFixed(6) }}</p>
-      <button class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700" @click="setManualLocation">
-        Set Lokasi Manual ini
-      </button>
-
-    </div>
-
     <div v-if="isLoading" class="mt-4 text-center text-blue-600 font-semibold">
       Menghitung hasil, mohon tunggu...
     </div>
+
+    <AlertBox
+      v-model:show="crError"
+      :text="`Perbandingan kriteria Anda kurang konsisten (CR: ${ ahpStats!.consistencyRatio.toFixed(4) }). Silakan periksa lagi nilai preferensinya.`"
+      type="error"
+      closable
+    />
 
     <div v-if="resultData.length > 0" class="mt-10">
       <h2 class="text-xl font-bold mb-4">Hasil Rekomendasi Universitas:</h2>
