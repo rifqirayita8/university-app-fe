@@ -4,6 +4,7 @@ import api from '@/utils/api';
 import AlertBox from '@/components/AlertBox.vue';
 import L from 'leaflet';
 import { criteriaPairs, ahpScale, ahpStats } from '@/constants/ahp';
+import '@/assets/animations.css';
 
 const criteriaWeights= ref<number[]>(Array(criteriaPairs.length).fill(1));
 const userLat= ref<number | null>(null);
@@ -14,12 +15,13 @@ const buttonRef= ref<HTMLElement | null>(null);
 const locationError= ref(false);
 const formError= ref(false);
 const crError= ref(false);
+const expandedIndex= ref(null);
 
 const manualMarker= ref<L.Marker | null>(null);
 const manualSelectedLatLng= ref<{lat:number, lng:number} | null>(null);
 
 const isLoading= ref(false);
-const resultData= ref<Array<{namaUniversitas: string, skor: number}>>([]);
+const resultData= ref<Array<{namaUniversitas: string, skor: number, detail:any}>>([]);
 
 onMounted(() => {
   getLocation();
@@ -72,6 +74,10 @@ const getLocation= () => {
   )
 };
 
+function toggleExpanded(index:any) {
+  expandedIndex.value = expandedIndex.value === index ? null : index
+}
+
 const setManualLocation= () => {
   if (manualSelectedLatLng.value) {
     userLat.value = manualSelectedLatLng.value.lat;
@@ -101,25 +107,38 @@ const submitAHP = async() => {
   resultData.value= [];
 
   try {
-    const ahpRank= await api.post('/ahp/rank', payload);
-    const university= await api.get('/datamaster/universitas');
+    const [ahpRank, university] = await Promise.all([
+      api.post('/ahp/rank', payload),
+      api.get('/datamaster/universitas')
+    ]);
     
     const criteriaRank= ahpRank.data.result.criteriaRankMetaMap
     ahpStats.value= {
       consistencyRatio: criteriaRank.cr,
     }
 
-    if(ahpStats && ahpStats.value.consistencyRatio > 0.1) {
+    if(ahpStats.value.consistencyRatio > 0.1) {
       crError.value= true;
     }
+
     const rankedMap= ahpRank.data.result.rankedScoreMap;
-    resultData.value= Object.entries(rankedMap).map(([namaUniversitas, skor]) => ({
-      namaUniversitas,
-      skor: typeof skor === 'number' ? skor : parseFloat(String(skor)) || 0,
-    })).sort((a,b) => b.skor - a.skor);
+    const allUniv= university.data.data
+
+    resultData.value= Object.entries(rankedMap).map(([namaUniversitas, skor]) => {
+      const detailRaw= allUniv.find((u: any) => u.name === namaUniversitas);
+      const { latitude, longitude, ...detail } = detailRaw || {};
+
+      return {
+        namaUniversitas,
+        skor: typeof skor === 'number' ? skor : parseFloat(String(skor)) || 0,
+        detail,
+      };
+    }).sort((a, b) => b.skor - a.skor);
+
   } catch(err) {
     console.error('Error submitting AHP:', err);
     formError.value= true;
+
   } finally {
     isLoading.value= false;
   }
@@ -185,7 +204,7 @@ const submitAHP = async() => {
 
     <AlertBox
       v-model:show="crError"
-      :text="`Perbandingan kriteria Anda kurang konsisten (CR: ${ ahpStats!.consistencyRatio.toFixed(4) }). Silakan periksa lagi nilai preferensinya.`"
+      :text="`Perbandingan kriteria Anda kurang konsisten (CR: ${ ahpStats?.consistencyRatio.toFixed(4) }). Silakan periksa lagi nilai preferensinya.`"
       type="error"
       closable
     />
@@ -193,11 +212,22 @@ const submitAHP = async() => {
     <div v-if="resultData.length > 0" class="mt-10">
       <h2 class="text-xl font-bold mb-4">Hasil Rekomendasi Universitas:</h2>
       <ul class="space-y-3">
-        <li v-for="(item, index) in resultData" :key="item.namaUniversitas" class="p-4 bg-white rounded shadow border-l-4 border-blue-500">
-          <div class="flex justify-between">
+        <li 
+        v-for="(item, index) in resultData" 
+        :key="item.namaUniversitas" 
+        class="p-4 bg-white rounded shadow border-l-4 border-blue-500 cursor-pointer" @click="toggleExpanded(index)">
+          <div class="flex justify-between items-center">
             <span class="font-semibold">{{ index+1 }}. {{ item.namaUniversitas }}</span>
             <span class="text-gray-600">Skor: {{ item.skor.toFixed(4) }}</span>
           </div>
+          <transition name="expand">
+            <div v-if="expandedIndex === index" class="mt-3 text-sm text-gray-700 space-y-1">
+              <div><strong>Akreditasi:</strong> {{ item.detail.accreditation }}</div>
+              <div><strong>Biaya Kuliah:</strong> {{ item.detail.tuition_fee }}</div>
+              <div><strong>Persentase Lulus:</strong> {{ item.detail.pass_percentage }}</div>
+              <div><strong>Jumlah Prodi:</strong> {{ item.detail.major_count }}</div>
+            </div>
+          </transition>
         </li>
       </ul>
     </div>
