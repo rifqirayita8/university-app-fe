@@ -2,7 +2,8 @@
 import { ref, watch } from 'vue';
 import IconAccount from './icons/IconAccount.vue';
 import NavbarLogo from './icons/NavbarLogo.vue';
-import BaseInput from './BaseInput.vue';
+import LoginModal from './LoginModal.vue';
+import RegisterModal from './RegisterModal.vue';
 
 const navItems= [
   { label: 'Tanggal Penting', path: '/tanggal' },
@@ -20,7 +21,10 @@ const email= ref('');
 const emailError= ref('');
 const password = ref('');
 const passwordError = ref('');
-
+const name = ref('');
+const cpassword = ref('');
+const nameError = ref('');
+const cpasswordError = ref('');
 
 watch(email, () => {
   emailError.value = '';
@@ -51,14 +55,51 @@ const toggleAccount= () => {
   isAccountOpen.value= !isAccountOpen.value;
 }
 
-const login= () => {
-  // const isEmailValid = validateEmail();
-  // const isPasswordValid = validatePassword();
+const login = ({ email: inputEmail, password: inputPassword }: { email: string; password: string }) => {
+  email.value = inputEmail;
+  password.value = inputPassword;
 
-  // if (!isEmailValid || !isPasswordValid) return;
-  // isLoginModalOpen.value= true;
-  // console.log('Login clicked');
-}
+  const isEmailValid = validateEmail();
+  const isPasswordValid = validatePassword();
+
+  if (!isEmailValid || !isPasswordValid) return;
+
+  isLoggedIn.value = true;
+  isLoginModalOpen.value = false;
+  isAccountOpen.value = false;
+
+  console.log('Login success:', inputEmail);
+};
+
+const register = () => {
+  // Reset error
+  nameError.value = '';
+  emailError.value = '';
+  passwordError.value = '';
+  cpasswordError.value = '';
+
+  let valid = true;
+
+  if (!name.value.trim()) {
+    nameError.value = 'Nama tidak boleh kosong';
+    valid = false;
+  }
+
+  if (!validateEmail()) valid = false;
+  if (!validatePassword()) valid = false;
+
+  if (cpassword.value !== password.value) {
+    cpasswordError.value = 'Konfirmasi password tidak cocok';
+    valid = false;
+  }
+
+  if (!valid) return;
+
+  // Simulasikan pendaftaran berhasil
+  console.log('Register berhasil:', name.value, email.value);
+  isRegisterModalOpen.value = false;
+  isLoggedIn.value = true;
+};
 
 const logout= () => {
   isLoggedIn.value= false;
@@ -68,6 +109,7 @@ const logout= () => {
 
 const openLoginModal= () => {
   isLoginModalOpen.value= true;
+  closeRegisterModal();
 }
 
 const closeLoginModal= () => {
@@ -167,48 +209,24 @@ const closeRegisterModal= () => {
     </div>
   </div>
 
+  <LoginModal
+    v-model="isLoginModalOpen"
+    :email-error="emailError"
+    :password-error="passwordError"
+    @login="login"
+    @close="closeLoginModal"
+    @open-register="openRegisterModal"
+  />
 
-  <div
-    v-if="isLoginModalOpen"
-    class="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center"
-    @click="closeLoginModal"
-  >
-    <div
-      class="bg-white p-8 rounded-lg w-96 shadow-lg"
-      @click.stop
-    >
-      <h2 class="text-2xl font-semibold mb-4">Login</h2>
-      <form @submit.prevent="login">
-        <BaseInput
-          label="Email"
-          type="email"
-          v-model="email"
-          placeholder="Enter your email"
-          :error="emailError"
-        />
-        <BaseInput
-          label="Password"
-          type="password"
-          v-model="password"
-          placeholder="Enter your password"
-          :error="passwordError"
-        />
-        <button
-          type="submit"
-          class="w-full py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition duration-200"
-        >
-          Login
-        </button>
-      </form>
-      <div class="mt-4 text-center">
-        <span class="text-sm">Belum punya akun?</span>
-        <button
-          class="text-blue-500 text-sm ml-2"
-          @click="openRegisterModal"
-        >
-          Daftar
-        </button>
-      </div>
-    </div>
-  </div>
+  <RegisterModal
+  v-model="isRegisterModalOpen"
+  :email-error="emailError"
+  :password-error="passwordError"
+  :name-error="nameError"
+  :cpassword-error="cpasswordError"
+  @register="register"
+  @close="closeRegisterModal"
+  @open-login="openLoginModal"
+/>
+
 </template>
