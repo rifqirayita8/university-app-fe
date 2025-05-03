@@ -7,6 +7,12 @@ import NavbarHomepage from './components/NavbarHomepage.vue';
   <NavbarHomepage />
   <RouterView />
 </template>
+
+<style>
+  body {
+    font-family: 'Nunito', sans-serif;
+  }
+</style>
   <!-- <header>
     <img alt="Vue logo" class="logo" src="@/assets/logo.svg" width="125" height="125" />
 
