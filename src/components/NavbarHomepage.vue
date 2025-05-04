@@ -4,6 +4,7 @@ import IconAccount from './icons/IconAccount.vue';
 import NavbarLogo from './icons/NavbarLogo.vue';
 import LoginModal from './LoginModal.vue';
 import RegisterModal from './RegisterModal.vue';
+import api from '@/utils/api';
 
 const navItems= [
   { label: 'Tanggal Penting', path: '/tanggal' },
@@ -17,95 +18,121 @@ const isAccountOpen= ref(false);
 const isLoggedIn= ref(false);
 const isLoginModalOpen= ref(false);
 const isRegisterModalOpen= ref(false);
-const email= ref('');
-const emailError= ref('');
-const password = ref('');
-const passwordError = ref('');
+const emailLogin= ref('');
+const emailLoginError= ref('');
+const passwordLogin = ref('');
+const passwordLoginError = ref('');
 const name = ref('');
-const cpassword = ref('');
 const nameError = ref('');
+const emailRegister = ref('');
+const emailRegisterError = ref('');
+const passwordRegister = ref('');
+const passwordRegisterError = ref('');
+const cpassword = ref('');
 const cpasswordError = ref('');
 
-watch(email, () => {
-  emailError.value = '';
+watch(emailLogin, () => {
+  emailLoginError.value = '';
 });
 
-watch(password, () => {
-  passwordError.value = '';
+watch(passwordLogin, () => {
+  passwordLoginError.value = '';
 });
-
-const validateEmail = () => {
-  if (!email.value.includes('@')) {
-    emailError.value = 'Email tidak valid';
-    return false;
-  }
-  return true;
-};
-
-const validatePassword = () => {
-  if (password.value.length < 6) {
-    passwordError.value = 'Password minimal 6 karakter';
-    return false;
-  }
-  return true;
-};
 
 
 const toggleAccount= () => {
   isAccountOpen.value= !isAccountOpen.value;
 }
 
-const login = ({ email: inputEmail, password: inputPassword }: { email: string; password: string }) => {
-  email.value = inputEmail;
-  password.value = inputPassword;
+const loginUser = async ({ email: inputEmail, password: inputPassword }: { email: string; password: string }) => {
+  emailLogin.value = inputEmail;
+  passwordLogin.value = inputPassword;
 
-  const isEmailValid = validateEmail();
-  const isPasswordValid = validatePassword();
+  try {
+    const response = await api.post('/auth/login', {
+      email: inputEmail,
+      password: inputPassword,
+    });
 
-  if (!isEmailValid || !isPasswordValid) return;
+    console.log('Login success:', response.data);
+    emailLogin.value = '';
+    passwordLogin.value = '';
+    emailLoginError.value = '';
+    inputEmail = '';
+    inputPassword = '';
 
-  isLoggedIn.value = true;
-  isLoginModalOpen.value = false;
-  isAccountOpen.value = false;
-
-  console.log('Login success:', inputEmail);
+    isLoggedIn.value = true;
+    isLoginModalOpen.value = false;
+    isAccountOpen.value = false;
+  } catch (err: any) {
+    console.error('Login failed:', err);
+    
+    if (err.response) {
+      const { message } = err.response.data;
+      emailLoginError.value = message.includes('email') ? message : '';
+      passwordLoginError.value = message.includes('password') ? message : '';
+    } else {
+      emailLoginError.value = 'Terjadi kesalahan. Coba lagi nanti.';
+    }
+  }
 };
 
-const register = () => {
-  // Reset error
-  nameError.value = '';
-  emailError.value = '';
-  passwordError.value = '';
-  cpasswordError.value = '';
-
-  let valid = true;
-
-  if (!name.value.trim()) {
-    nameError.value = 'Nama tidak boleh kosong';
-    valid = false;
-  }
-
-  if (!validateEmail()) valid = false;
-  if (!validatePassword()) valid = false;
-
-  if (cpassword.value !== password.value) {
-    cpasswordError.value = 'Konfirmasi password tidak cocok';
-    valid = false;
-  }
-
-  if (!valid) return;
-
-  // Simulasikan pendaftaran berhasil
-  console.log('Register berhasil:', name.value, email.value);
-  isRegisterModalOpen.value = false;
-  isLoggedIn.value = true;
-};
-
-const logout= () => {
+const logoutUser= () => {
   isLoggedIn.value= false;
   isAccountOpen.value= false;
   console.log('Logout clicked');
+  emailLogin.value = '';
+  console.log('emailvalue: ', emailLogin.value);
 }
+
+const registerUser = async ({
+  name: inputName, 
+  emailRegister: inputEmailRegister,
+  passwordRegister: inputPasswordRegister,
+  cpassword: inputCpassword,
+}: {name: string; emailRegister: string, passwordRegister:string, cpassword: string}) => {
+  name.value = inputName;
+  emailRegister.value = inputEmailRegister;
+  passwordRegister.value = inputPasswordRegister;
+  cpassword.value = inputCpassword;
+  try {
+    console.log('Data yang dikirim:', {
+      name: inputName,
+      emailRegister: inputEmailRegister,
+      passwordRegister: inputPasswordRegister,
+      cpassword: inputCpassword,
+    });
+
+    const response = await api.post('/auth/register', {
+      username: inputName,
+      email: inputEmailRegister,
+      password: inputPasswordRegister,
+      confirmPassword: inputCpassword,
+    });
+
+    console.log('Register success:', response.data);
+
+    name.value = '';
+    emailLogin.value = '';
+    passwordLogin.value = '';
+    cpassword.value = '';
+
+    isRegisterModalOpen.value = false;
+    isLoggedIn.value = true;
+  } catch (err: any) {
+      console.error('Register failed:', err);
+
+    if (err.response) {
+      console.log('Detail error:', err.response.data); // 🕵️‍♂️ ini penting
+      const { message } = err.response.data;
+      if (message.includes('name')) nameError.value = message;
+      if (message.includes('email')) emailLoginError.value = message;
+      if (message.includes('password')) passwordLoginError.value = message;
+    } else {
+      emailLoginError.value = 'Terjadi kesalahan. Coba lagi nanti.';
+    }
+  }
+};
 
 const openLoginModal= () => {
   isLoginModalOpen.value= true;
@@ -163,7 +190,7 @@ const closeRegisterModal= () => {
           </div>
           <div
             v-else
-            @click="logout"
+            @click="logoutUser"
             class="px-4 py-2 hover:bg-gray-100 cursor-pointer"
           >
             Logout
@@ -200,8 +227,8 @@ const closeRegisterModal= () => {
         </div>
         <div
           v-else
-          @click="logout"
-          class="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+          @click="logoutUser"
+          class="px-4 py-2 hover:bg-gray-100 cursor-pointer leading"
         >
           Logout
         </div>
@@ -211,20 +238,21 @@ const closeRegisterModal= () => {
 
   <LoginModal
     v-model="isLoginModalOpen"
-    :email-error="emailError"
-    :password-error="passwordError"
-    @login="login"
+    :key="isLoginModalOpen ? 'open' : 'closed'"
+    :email-error="emailLoginError"
+    :password-error="passwordLoginError"
+    @login="loginUser"
     @close="closeLoginModal"
     @open-register="openRegisterModal"
   />
 
   <RegisterModal
   v-model="isRegisterModalOpen"
-  :email-error="emailError"
-  :password-error="passwordError"
+  :email-error="emailRegisterError"
+  :password-error="passwordRegisterError"
   :name-error="nameError"
   :cpassword-error="cpasswordError"
-  @register="register"
+  @register="registerUser"
   @close="closeRegisterModal"
   @open-login="openLoginModal"
 />

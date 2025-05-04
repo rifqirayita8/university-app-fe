@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import BaseInput from './BaseInput.vue';
 
 defineProps<{
@@ -17,6 +17,18 @@ const emit = defineEmits<{
 
 const email = ref('');
 const password = ref('');
+
+const resetFields = () => {
+  email.value = '';
+  password.value = '';
+}
+
+// watch(() => modelValue, (newValue) => {
+//   if (newValue) {
+//     resetFields();
+//   }
+// });
+
 </script>
 
 

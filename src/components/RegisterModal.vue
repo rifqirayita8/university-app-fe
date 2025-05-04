@@ -14,8 +14,8 @@ const emit = defineEmits<{
   (e: 'update:modelValue', val: boolean): void;
   (e: 'register', payload: {
     name: string;
-    email: string;
-    password: string;
+    emailRegister: string;
+    passwordRegister: string;
     cpassword: string;
   }): void;
   (e: 'open-login'): void;
@@ -23,8 +23,8 @@ const emit = defineEmits<{
 }>();
 
 const name = ref('');
-const email = ref('');
-const password = ref('');
+const emailRegister = ref('');
+const passwordRegister = ref('');
 const cpassword = ref('');
 </script>
 
@@ -39,8 +39,8 @@ const cpassword = ref('');
       <form
         @submit.prevent="emit('register', {
           name: name,
-          email: email,
-          password: password,
+          emailRegister: emailRegister,
+          passwordRegister: passwordRegister,
           cpassword: cpassword
         })"
       >
@@ -53,14 +53,14 @@ const cpassword = ref('');
         <BaseInput
           label="Email"
           type="email"
-          v-model="email"
+          v-model="emailRegister"
           placeholder="Email"
           :error="emailError"
         />
         <BaseInput
           label="Password"
           type="password"
-          v-model="password"
+          v-model="passwordRegister"
           placeholder="Password"
           :error="passwordError"
         />
