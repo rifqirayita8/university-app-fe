@@ -16,7 +16,11 @@ const locationError= ref(false);
 const formError= ref(false);
 const crError= ref(false);
 const expandedIndex= ref(null);
-
+    // nextTick(() => {
+    //   if (buttonRef.value) {
+    //     buttonRef.value.scrollIntoView({behavior: 'smooth'});
+    //   }
+    // })
 const manualMarker= ref<L.Marker | null>(null);
 const manualSelectedLatLng= ref<{lat:number, lng:number} | null>(null);
 
@@ -24,54 +28,59 @@ const isLoading= ref(false);
 const resultData= ref<Array<{namaUniversitas: string, skor: number, detail:any}>>([]);
 
 onMounted(() => {
-  getLocation();
+  getLocationAndInitMap();
+});
 
-  map.value= L.map(mapContainer.value).setView([51.505, -0.09], 13);
+const getLocationAndInitMap = () => {
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      userLat.value = pos.coords.latitude;
+      userLong.value = pos.coords.longitude;
+
+      console.log('userLat', userLat.value);
+      console.log('userLong', userLong.value);
+
+      initMap();
+    },
+    (err) => {
+      locationError.value = true;
+      console.warn('Error getting location:', err);
+
+      userLat.value = 51.505;
+      userLong.value = -0.09;
+
+      initMap();
+    },
+  );
+};
+
+const initMap = () => {
+  map.value = L.map(mapContainer.value).setView([userLat.value!, userLong.value!], 13);
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
-    attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-}).addTo(map.value);
-  
-  map.value.on('click', (e:L.LeafletMouseEvent) => {
-    const {lat, lng} = e.latlng;
-    manualSelectedLatLng.value= {lat, lng};
+    attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    zIndex: 1,
+  }).addTo(map.value);
+
+  map.value.on('click', (e: L.LeafletMouseEvent) => {
+    const { lat, lng } = e.latlng;
+    manualSelectedLatLng.value = { lat, lng };
 
     if (manualMarker.value) {
       map.value.removeLayer(manualMarker.value);
     }
 
-    // nextTick(() => {
-    //   if (buttonRef.value) {
-    //     buttonRef.value.scrollIntoView({behavior: 'smooth'});
-    //   }
-    // })
-
-    console.log('buttonRef', buttonRef.value);
-
-    const marker= L.marker([lat, lng], {
+    const marker = L.marker([lat, lng], {
       draggable: true,
     }).addTo(map.value);
 
     marker.on('dragend', () => {
-      const pos= marker.getLatLng();
-      manualSelectedLatLng.value= {lat:pos.lat, lng:pos.lng};
+      const pos = marker.getLatLng();
+      manualSelectedLatLng.value = { lat: pos.lat, lng: pos.lng };
     });
 
-    manualMarker.value= marker;
-  })
-})
-
-const getLocation= () => {
-  navigator.geolocation.getCurrentPosition(
-    (pos) => {
-      userLat.value= pos.coords.latitude;
-      userLong.value= pos.coords.longitude;
-    },
-    (err) => {
-      locationError.value= true;
-      console.warn('Error getting location:', err);
-    },
-  )
+    manualMarker.value = marker;
+  });
 };
 
 function toggleExpanded(index:any) {
@@ -102,6 +111,8 @@ const submitAHP = async() => {
     userLat: userLat.value,
     userLong: userLong.value,
   };
+
+  console.log('Payload:', payload);
 
   isLoading.value= true;
   resultData.value= [];
@@ -163,12 +174,13 @@ const submitAHP = async() => {
       type="error"
       closable
     />
-    
-    <div ref="mapContainer" class="mt-6 h-96 w-96 bg-gray-200 rounded"></div>
+
+    <h2 class="text-lg font-semibold mb-4">Pilih Lokasi Manual:</h2>
+    <div ref="mapContainer" class="mt-6 mb-2 h-96 w-96 bg-gray-200 rounded"></div>
 
     <div v-if="manualSelectedLatLng" class="mt-4">
       <p class="mb-2">Lokasi manual: {{ manualSelectedLatLng.lat.toFixed(6) }}, {{ manualSelectedLatLng.lng.toFixed(6) }}</p>
-      <button ref="buttonRef" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700" @click="setManualLocation">
+      <button ref="buttonRef" class="mb-2 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700" @click="setManualLocation">
         Set Lokasi Manual ini
       </button>
     </div>
@@ -226,6 +238,11 @@ const submitAHP = async() => {
               <div><strong>Biaya Kuliah:</strong> {{ item.detail.tuition_fee }}</div>
               <div><strong>Persentase Lulus:</strong> {{ item.detail.pass_percentage }}</div>
               <div><strong>Jumlah Prodi:</strong> {{ item.detail.major_count }}</div>
+              <button
+              @click.stop=""
+              class="bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 mt-2">
+              <span>Bookmark</span>
+            </button>
             </div>
           </transition>
         </li>

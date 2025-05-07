@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { ref, watch, onMounted } from 'vue';
 import IconAccount from './icons/IconAccount.vue';
 import NavbarLogo from './icons/NavbarLogo.vue';
 import LoginModal from './LoginModal.vue';
 import RegisterModal from './RegisterModal.vue';
 import api from '@/utils/api';
+import { jwtDecode } from 'jwt-decode';
 
 const navItems= [
   { label: 'Tanggal Penting', path: '/tanggal' },
@@ -31,6 +32,13 @@ const passwordRegisterError = ref('');
 const cpassword = ref('');
 const cpasswordError = ref('');
 
+onMounted(() => {
+  isLoggedIn.value= localStorage.getItem('token') !== null;
+});
+
+console.log('isLoggedIn:', isLoggedIn.value);
+console.log('token:', localStorage.getItem('token'));
+
 watch(emailLogin, () => {
   emailLoginError.value = '';
 });
@@ -55,12 +63,13 @@ const loginUser = async ({ email: inputEmail, password: inputPassword }: { email
     });
 
     console.log('Login success:', response.data);
+
+    localStorage.setItem('token', response.data.token);
     emailLogin.value = '';
     passwordLogin.value = '';
     emailLoginError.value = '';
     inputEmail = '';
     inputPassword = '';
-
     isLoggedIn.value = true;
     isLoginModalOpen.value = false;
     isAccountOpen.value = false;
@@ -78,11 +87,10 @@ const loginUser = async ({ email: inputEmail, password: inputPassword }: { email
 };
 
 const logoutUser= () => {
-  isLoggedIn.value= false;
   isAccountOpen.value= false;
-  console.log('Logout clicked');
+  isLoggedIn.value= false;
   emailLogin.value = '';
-  console.log('emailvalue: ', emailLogin.value);
+  localStorage.removeItem('token');
 }
 
 const registerUser = async ({

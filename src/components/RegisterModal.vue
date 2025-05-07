@@ -31,7 +31,7 @@ const cpassword = ref('');
 <template>
   <div
     v-if="modelValue"
-    class="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center"
+    class="kueelazz fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center"
     @click="emit('close')"
   >
     <div class="bg-white p-8 rounded-lg w-96 shadow-lg" @click.stop>
@@ -87,3 +87,9 @@ const cpassword = ref('');
     </div>
   </div>
 </template>
+
+<style scoped>
+.kueelazz {
+  z-index: 9000;
+}
+</style>
