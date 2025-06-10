@@ -214,9 +214,17 @@ function generatePairwiseAHPFromRankedList(ranked: string[]): [string, string, n
     </div>
 
     <div class="max-w-xl py-4">
-      <h2 class="text-lg font-semibold mb-4">Urutkan Kriteria (Paling Penting ke Tidak Penting)</h2>
+      <h2 class="text-lg font-semibold mb-8">Geser dan urutkan dari atas (paling penting) ke bawah (kurang penting).<br />
+        <strong>Contoh:</strong> Akreditasi, Biaya, Jarak, dst.</h2>
 
-      <draggable
+        <div class="relative py-4">
+          <div class="absolute -top-5 left-1/2 -translate-x-1/2 text-sm text-green-600 flex items-center gap-1">
+            <svg class="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M10 5l5 5H5l5-5z" />
+            </svg>
+            <span>Paling Penting</span>
+          </div>
+            <draggable
         v-model="ranked"
         item-key="id"
         class="space-y-2"
@@ -240,12 +248,22 @@ function generatePairwiseAHPFromRankedList(ranked: string[]): [string, string, n
         </div>
       </template>
       </draggable>
+
+      <div class="absolute -bottom-5 left-1/2 -translate-x-1/2 text-sm text-red-600 flex items-center gap-1">
+        <span>Paling Kurang Penting</span>
+        <svg class="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+          <path d="M10 15l-5-5h10l-5 5z" /> <!-- panah bawah -->
+        </svg>
+      </div>
+        </div>
+
+    
     </div>
 
     <button
       @click="submitAHP"
       :disabled="!canSubmit"
-      class="mt-6 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+      class="mt-8 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
     >
       Kirim Data AHP
     </button>
