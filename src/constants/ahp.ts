@@ -66,5 +66,5 @@ export const criteria: Criterion[] = [
   { id: 2, label: 'Biaya' },
   { id: 3, label: 'Jarak' },
   { id: 4, label: 'Jumlah Jurusan' },
-  { id: 5, label: 'Persentase Kelulusan' },
+  { id: 5, label: 'Tingkat Keketatan' },
 ]

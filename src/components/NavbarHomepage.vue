@@ -6,9 +6,9 @@ import LoginModal from './LoginModal.vue';
 import RegisterModal from './RegisterModal.vue';
 import api from '@/utils/api';
 import { jwtDecode } from 'jwt-decode';
+import { useRouter } from 'vue-router';
 
 const navItems= [
-  { label: 'Tanggal Penting', path: '/tanggal' },
   { label: 'Rekomendasi', path: '/recommendation' },
   { label: 'Jurusan', path: '/university' },
   { label: 'Home', path: '/' }
@@ -31,6 +31,7 @@ const passwordRegister = ref('');
 const passwordRegisterError = ref('');
 const cpassword = ref('');
 const cpasswordError = ref('');
+const router= useRouter();
 
 onMounted(() => {
   isLoggedIn.value= localStorage.getItem('token') !== null;
@@ -160,6 +161,14 @@ const closeRegisterModal= () => {
   isRegisterModalOpen.value= false;
 }
 
+const goHome= () => {
+  router.push('/');
+  isOpen.value = false;
+  isAccountOpen.value = false;
+  isLoginModalOpen.value = false;
+  isRegisterModalOpen.value = false;  
+}
+
 </script>
 
 <template>
@@ -168,7 +177,10 @@ const closeRegisterModal= () => {
       <div class="lg:hidden text-white text-3xl cursor-pointer items-center" @click="isOpen= !isOpen">
         ☰
       </div>
-      <NavbarLogo alt="logo" class="lg:flex items-center" />
+      <button @click="goHome" class="cursor-pointer bg-transparent border-none p-0">
+        <NavbarLogo class="lg:flex items-center" />
+      </button>
+
     </div>
 
     <nav class="hidden lg:flex gap-x-4 items-center">
