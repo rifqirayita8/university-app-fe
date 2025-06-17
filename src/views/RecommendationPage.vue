@@ -23,9 +23,10 @@ const locationError= ref(false);
 const formError= ref(false);
 const crError= ref(false);
 const expandedIndex= ref(null);
+const resultRef= ref<HTMLElement | null>(null);
     // nextTick(() => {
-    //   if (buttonRef.value) {
-    //     buttonRef.value.scrollIntoView({behavior: 'smooth'});
+    //   if (resultRef.value) {
+    //     resultRef.value.scrollIntoView({behavior: 'smooth'});
     //   }
     // })
 const manualMarker= ref<L.Marker | null>(null);
@@ -172,6 +173,12 @@ const submitAHP = async() => {
       };
     }).sort((a, b) => b.skor - a.skor);
 
+    await nextTick(); 
+
+    if (resultRef.value) {
+      resultRef.value.scrollIntoView({ behavior: 'smooth' });
+    }
+
     formError.value= false;
 
   } catch(err) {
@@ -220,7 +227,7 @@ function generatePairwiseAHPFromRankedList(ranked: string[]): [string, string, n
     />
 
     <h2 class="text-lg font-semibold mb-4">Pilih Lokasi Manual:</h2>
-    <div ref="mapContainer" class="mt-6 mb-2 h-96 w-96 bg-gray-200 rounded"></div>
+    <div ref="mapContainer" class="mt-6 mb-2 h-80 sm:h-96 w-[90vw] sm:w-[28rem] bg-gray-200 rounded mx-auto"></div>
 
     <div v-if="manualSelectedLatLng" class="mt-4">
       <!-- <p class="mb-2">Lokasi manual: {{ manualSelectedLatLng.lat.toFixed(6) }}, {{ manualSelectedLatLng.lng.toFixed(6) }}</p> -->
@@ -321,7 +328,7 @@ function generatePairwiseAHPFromRankedList(ranked: string[]): [string, string, n
         v-for="(item, index) in displayedResults" 
         :key="item.namaUniversitas" 
         class="p-4 bg-white rounded shadow border-l-4 border-blue-500 cursor-pointer" @click="toggleExpanded(index)">
-          <div class="flex justify-between items-center">
+          <div ref="resultRef" class="flex justify-between items-center">
             <span class="font-semibold">{{ resultData.indexOf(item) + 1 }}. {{ item.namaUniversitas }}</span>
             <span class="text-gray-600">Skor: {{ item.skor.toFixed(4) }}</span>
           </div>
