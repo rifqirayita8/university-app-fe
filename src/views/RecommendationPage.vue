@@ -321,14 +321,14 @@ function generatePairwiseAHPFromRankedList(ranked: string[]): [string, string, n
     />
 
     <!--new design-->
-    <div v-if="resultData.length > 0" class="mt-10">
+    <div v-if="resultData.length > 0" ref="resultRef" class="mt-10">
       <h2 class="text-xl font-bold mb-4">Hasil Rekomendasi Universitas:</h2>
       <ul class="space-y-3">
         <li 
         v-for="(item, index) in displayedResults" 
         :key="item.namaUniversitas" 
         class="p-4 bg-white rounded shadow border-l-4 border-blue-500 cursor-pointer" @click="toggleExpanded(index)">
-          <div ref="resultRef" class="flex justify-between items-center">
+          <div class="flex justify-between items-center">
             <span class="font-semibold">{{ resultData.indexOf(item) + 1 }}. {{ item.namaUniversitas }}</span>
             <span class="text-gray-600">Skor: {{ item.skor.toFixed(4) }}</span>
           </div>
