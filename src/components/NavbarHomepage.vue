@@ -172,7 +172,7 @@ const goHome= () => {
 </script>
 
 <template>
-  <div class="bg-[#60A3AB] px-6 py-4 flex items-center justify-between h-16">
+  <div class="bg-[#60A3AB] px-6 py-4 flex items-center justify-between h-16 shadow-lg">
     <div class="flex items-center gap-x-4">
       <div class="lg:hidden text-white text-3xl cursor-pointer items-center" @click="isOpen= !isOpen">
         ☰

@@ -3,17 +3,12 @@ import { ref, onMounted, computed, nextTick } from 'vue';
 import api from '@/utils/api';
 import AlertBox from '@/components/AlertBox.vue';
 import L from 'leaflet';
-import { criteria, ahpStats, type Criterion, criteriaPairs} from '@/constants/ahp';
+import { criteria, ahpStats, type Criterion} from '@/constants/ahp';
 import '@/assets/animations.css';
 import draggable from 'vuedraggable';
 
-
-
 const ranked= ref<Criterion[]>([...criteria]);
-
 const criteriaResult= ref<[string, string, number][]>([]);
-
-const criteriaWeights= ref<number[]>(Array(criteriaPairs.length).fill(1));
 const userLat= ref<number | null>(null);
 const userLong= ref<number | null>(null);
 const map= ref()
@@ -24,14 +19,8 @@ const formError= ref(false);
 const crError= ref(false);
 const expandedIndex= ref(null);
 const resultRef= ref<HTMLElement | null>(null);
-    // nextTick(() => {
-    //   if (resultRef.value) {
-    //     resultRef.value.scrollIntoView({behavior: 'smooth'});
-    //   }
-    // })
 const manualMarker= ref<L.Marker | null>(null);
 const manualSelectedLatLng= ref<{lat:number, lng:number} | null>(null);
-
 const isLoading= ref(false);
 const resultData= ref<Array<{namaUniversitas: string, skor: number, detail:any}>>([]);
 const showAllResults = ref(false);
@@ -123,22 +112,14 @@ const submitAHP = async() => {
   const priorityValues= ranked.value.map((c) => c.value)
   criteriaResult.value= generatePairwiseAHPFromRankedList(priorityValues);
 
-  const formattedWeights= criteriaPairs.map(([a, b], i) => [a, b, criteriaWeights.value[i]]);  
-
   const payload= {
     criteriaWeights: criteriaResult.value,
     userLat: userLat.value,
     userLong: userLong.value,
   };
 
-  console.log('Payload:', payload);
-
   isLoading.value= true;
   resultData.value= [];
-
-  console.log("Ranked by user:", ranked.value.map(r => r.label));
-  console.log("Slider Weights:", criteriaWeights.value);
-  console.log("Kriteria dikirim ke backend:", JSON.stringify(criteriaResult.value, null, 2));
 
 
   try {
@@ -230,13 +211,11 @@ function generatePairwiseAHPFromRankedList(ranked: string[]): [string, string, n
     <div ref="mapContainer" class="mt-6 mb-2 h-80 sm:h-96 w-[90vw] sm:w-[28rem] bg-gray-200 rounded mx-auto"></div>
 
     <div v-if="manualSelectedLatLng" class="mt-4">
-      <!-- <p class="mb-2">Lokasi manual: {{ manualSelectedLatLng.lat.toFixed(6) }}, {{ manualSelectedLatLng.lng.toFixed(6) }}</p> -->
       <button ref="buttonRef" class="mb-2 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700" @click="setManualLocation">
         Set Lokasi Manual ini
       </button>
     </div>
 
-    <!-- desain baru-->
     <div class="max-w-xl py-4">
       <h2 class="text-lg font-semibold mb-8">Geser dan urutkan dari atas (paling penting) ke bawah (kurang penting).<br />
         <strong>Contoh:</strong> Akreditasi, Biaya, Jarak, dst.</h2>
@@ -282,25 +261,6 @@ function generatePairwiseAHPFromRankedList(ranked: string[]): [string, string, n
       </div>   
     </div>
 
-    <!-- desain lama-->
-    <!-- <div
-      v-for="(pair, index) in criteriaPairs"
-      :key="index"
-      class="mb-4"
-    >
-      <label class="block font-semibold mb-2">
-         Seberapa penting <span class="text-blue-600">{{ pair[0] }}</span> dibanding <span class="text-green-600">{{  pair[1] }}</span>?
-      </label>
-      <select
-        v-model.number="criteriaWeights[index]"
-        class="border border-gray-300 p-2 rounded w-full"
-      >
-        <option v-for="option in ahpScale" :key="option.value" :value="option.value">
-          {{ option.label }}
-        </option>
-      </select>
-    </div> -->
-
     <button
       @click="submitAHP"
       :disabled="!canSubmit"
@@ -320,7 +280,6 @@ function generatePairwiseAHPFromRankedList(ranked: string[]): [string, string, n
       closable
     />
 
-    <!--new design-->
     <div v-if="resultData.length > 0" ref="resultRef" class="mt-10">
       <h2 class="text-xl font-bold mb-4">Hasil Rekomendasi Universitas:</h2>
       <ul class="space-y-3">
@@ -356,35 +315,6 @@ function generatePairwiseAHPFromRankedList(ranked: string[]): [string, string, n
         </button>
       </div>
     </div>
-
-    <!--old design-->
-        <!-- <div v-if="resultData.length > 0" class="mt-10">
-      <h2 class="text-xl font-bold mb-4">Hasil Rekomendasi Universitas:</h2>
-      <ul class="space-y-3">
-        <li 
-        v-for="(item, index) in resultData" 
-        :key="item.namaUniversitas" 
-        class="p-4 bg-white rounded shadow border-l-4 border-blue-500 cursor-pointer" @click="toggleExpanded(index)">
-          <div class="flex justify-between items-center">
-            <span class="font-semibold">{{ index+1 }}. {{ item.namaUniversitas }}</span>
-            <span class="text-gray-600">Skor: {{ item.skor.toFixed(4) }}</span>
-          </div>
-          <transition name="expand">
-            <div v-if="expandedIndex === index" class="mt-3 text-sm text-gray-700 space-y-1">
-              <div><strong>Akreditasi:</strong> {{ item.detail.accreditation }}</div>
-              <div><strong>Biaya Kuliah:</strong> {{ item.detail.tuition_fee }}</div>
-              <div><strong>Persentase Lulus:</strong> {{ item.detail.pass_percentage }}</div>
-              <div><strong>Jumlah Prodi:</strong> {{ item.detail.major_count }}</div>
-              <button
-              @click.stop=""
-              class="bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 mt-2">
-              <span>Bookmark</span>
-            </button>
-            </div>
-          </transition>
-        </li>
-      </ul>
-    </div> -->
   </div>
 </template>
 

@@ -41,11 +41,16 @@ onMounted(fetchUniversitas);
 
 <template>
   <div class="recommendation-page p-4">
-    <h1 class="text-2xl font-bold mb-4">Daftar Universitas</h1>
+    <h1 class="text-3xl font-semibold text-center text-blue-700 mb-6 border-b pb-2">
+      📚 Daftar Universitas
+    </h1>
 
-    <div v-if="isLoading" class="text-center py-10">
-      <div class="animate-spin rounded-full h-10 w-10 border-t-4 border-blue-500 mx-auto mb-4"></div>
-      <p class="text-gray-600">Loading universitas...</p>
+
+    <div v-if="isLoading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div v-for="i in 6" :key="i" class="bg-white p-4 shadow rounded animate-pulse space-y-4">
+        <div class="h-6 bg-gray-200 rounded w-3/4"></div>
+        <div class="h-4 bg-gray-200 rounded w-1/2"></div>
+      </div>
     </div>
 
     <div v-else-if="isError" class="text-red-500 text-center py-10">
@@ -62,11 +67,13 @@ onMounted(fetchUniversitas);
       <div 
         v-for="university in universitiesList" 
         :key="university.universityId" 
-        class="bg-white p-4 shadow rounded cursor-pointer hover:shadow-lg transition"
+        class="bg-white p-6 shadow-sm rounded-xl cursor-pointer hover:shadow-md transition border hover:border-blue-400"
         @click="goToDetail(university.universityId, university.universityName)"
       >
-        <h2>{{ university.universityName }}</h2>
+        <h2 class="text-lg font-semibold text-gray-800 mb-1">{{ university.universityName }}</h2>
+        <p class="text-sm text-gray-500">Klik untuk lihat detail jurusan</p>
       </div>
+
     </div>
   </div>
 </template>
