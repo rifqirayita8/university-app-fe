@@ -32,12 +32,13 @@ export interface Criterion {
   id: number;
   label: string;
   value: string;
+  excluded?: boolean;
 }
 
 export const criteria: Criterion[] = [
-  { id: 1, label: 'Akreditasi', value: 'akreditasi' },
-  { id: 2, label: 'Biaya', value: 'biaya' },
-  { id: 3, label: 'Jarak', value: 'jarak' },
-  { id: 4, label: 'Jumlah Jurusan', value: 'jumlahJurusan' },
-  { id: 5, label: 'Tingkat Keketatan (Semakin ketat semakin baik)', value: 'tingkatKeterimaan' },
+  { id: 1, label: 'Akreditasi', value: 'akreditasi', excluded: false },
+  { id: 2, label: 'Biaya', value: 'biaya', excluded: false },
+  { id: 3, label: 'Jarak', value: 'jarak', excluded: false },
+  { id: 4, label: 'Jumlah Jurusan', value: 'jumlahJurusan', excluded: false },
+  { id: 5, label: 'Tingkat Keketatan (Semakin ketat semakin baik)', value: 'tingkatKeterimaan', excluded: false },
 ]

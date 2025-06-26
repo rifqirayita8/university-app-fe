@@ -16,6 +16,7 @@ const mapContainer= ref()
 const buttonRef= ref<HTMLElement | null>(null);
 const locationError= ref(false);
 const formError= ref(false);
+const excludeError= ref(false);
 const crError= ref(false);
 const expandedIndex= ref(null);
 const resultRef= ref<HTMLElement | null>(null);
@@ -100,6 +101,10 @@ const setManualLocation= () => {
   }
 }
 
+const excludedList= computed(() => {
+  return ranked.value.some(item => !item.excluded);
+})
+
 const canSubmit = computed(() => {
   const lat = userLat.value 
   const long = userLong.value
@@ -107,10 +112,15 @@ const canSubmit = computed(() => {
 });
 
 const submitAHP = async() => {
-  
+
+  if(!excludedList.value) {
+    excludeError.value= true;
+    return;
+  }
+  excludeError.value= false;
   showAllResults.value = false;
   const priorityValues= ranked.value.map((c) => c.value)
-  criteriaResult.value= generatePairwiseAHPFromRankedList(priorityValues);
+  criteriaResult.value= generatePairwiseAHPFromRankedList();
 
   const payload= {
     criteriaWeights: criteriaResult.value,
@@ -171,22 +181,43 @@ const submitAHP = async() => {
   }
 }
 
-function generatePairwiseAHPFromRankedList(ranked: string[]): [string, string, number][] {
-  const n= ranked.length;
+function generatePairwiseAHPFromRankedList(): [string, string, number][] {
+  const rankedList = ranked.value.map(c => c.value); // array of string (value saja)
+  const n = rankedList.length;
   const result: [string, string, number][] = [];
 
-  for (let i=0; i < n; i++) {
-    for (let j=i + 1; j < n; j++) {
-      const a= ranked[i]
-      const b= ranked[j];
-      const diff= j-i
-      const weight= Math.min(9, diff * 2 + 1)
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      const a = rankedList[i];
+      const b = rankedList[j];
+
+      const aExcluded = ranked.value.find(c => c.value === a)?.excluded;
+      const bExcluded = ranked.value.find(c => c.value === b)?.excluded;
+
+      let weight: number;
+
+      if (aExcluded && !bExcluded) {
+        weight = parseFloat((1/100).toFixed(5));
+      } else if (!aExcluded && bExcluded) {
+        weight = 100;
+      } else if (aExcluded && bExcluded) {
+        weight = 1;
+      } else {
+        const diff = j - i;
+        weight = Math.min(9, diff * 2 + 1);
+      }
+
       result.push([a, b, weight]);
     }
   }
-  console.log('Pairwise AHP:', result);
+
+  console.log('Pairwise AHP with excluded handled:', result);
   return result;
 }
+
+
+
+
 </script>
 
 <template>
@@ -216,18 +247,21 @@ function generatePairwiseAHPFromRankedList(ranked: string[]): [string, string, n
       </button>
     </div>
 
-    <div class="max-w-xl py-4">
-      <h2 class="text-lg font-semibold mb-8">Geser dan urutkan dari atas (paling penting) ke bawah (kurang penting).<br />
-        <strong>Contoh:</strong> Akreditasi, Biaya, Jarak, dst.</h2>
+  <div class="max-w-xl py-4">
+    <h2 class="text-lg font-semibold mb-8">
+      Geser dan urutkan dari atas (paling penting) ke bawah (kurang penting).<br />
+      <strong>Contoh:</strong> Akreditasi, Biaya, Jarak, dst.
+    </h2>
 
-        <div class="relative py-4">
-          <div class="absolute -top-5 left-1/2 -translate-x-1/2 text-sm text-green-600 flex items-center gap-1">
-            <svg class="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M10 5l5 5H5l5-5z" />
-            </svg>
-            <span>Paling Penting</span>
-          </div>
-            <draggable
+    <div class="relative py-4">
+      <div class="absolute -top-5 left-1/2 -translate-x-1/2 text-sm text-green-600 flex items-center gap-1">
+        <svg class="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+          <path d="M10 5l5 5H5l5-5z" />
+        </svg>
+        <span>Paling Penting</span>
+      </div>
+
+      <draggable
         v-model="ranked"
         item-key="id"
         class="space-y-2"
@@ -236,20 +270,35 @@ function generatePairwiseAHPFromRankedList(ranked: string[]): [string, string, n
         drag-class="drag"
         animation="200"
       >
-        <template #item="{ element }">
-        <div
-          class="bg-white shadow-md rounded-lg px-4 py-3 mb-2 flex items-center justify-between hover:scale-[1.01] cursor-move border border-gray-200"
-        >
-          <span class="font-medium text-gray-800">
-            {{ element.label }}
-          </span>
-          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-gray-400" fill="none"
-            viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M4 8h16M4 16h16" />
-          </svg>
-        </div>
-      </template>
+        <template #item="{ element, index }">
+          <div class="flex items-center justify-between gap-2">
+
+            <div
+              class="flex-1 px-4 py-3 border border-gray-200 rounded-lg flex items-center justify-between transition-all duration-150"
+              :class="{
+                'bg-gray-200 text-gray-500 opacity-70': element.excluded,
+                'bg-white shadow-md hover:scale-[1.01] cursor-move': !element.excluded,
+              }"
+            >
+              <span class="font-medium">{{ element.label }}</span>
+
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-gray-400" fill="none"
+                viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M4 8h16M4 16h16" />
+              </svg>
+            </div>
+
+            <label class="flex items-center text-sm text-gray-600 whitespace-nowrap ml-2">
+              <input
+                type="checkbox"
+                v-model="element.excluded"
+                class="accent-red-500 mr-1 scale-125 transition-transform hover:scale-150"
+              />
+              Abaikan
+            </label>
+          </div>
+        </template>
       </draggable>
 
       <div class="absolute -bottom-5 left-1/2 -translate-x-1/2 text-sm text-red-600 flex items-center gap-1">
@@ -258,8 +307,15 @@ function generatePairwiseAHPFromRankedList(ranked: string[]): [string, string, n
           <path d="M10 15l-5-5h10l-5 5z" />
         </svg>
       </div>
-      </div>   
     </div>
+
+    <AlertBox
+      v-model:show="excludeError"
+      text="Anda harus memilih minimal satu kriteria untuk dibandingkan."
+      type="error"
+      closable
+    />
+  </div>
 
     <button
       @click="submitAHP"

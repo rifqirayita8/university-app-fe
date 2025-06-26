@@ -77,6 +77,8 @@ const fetchJurusan= async () => {
       majorApplicants: major.applicants
     }));
 
+    console.log('Payload: ', res.data.payload);
+
   } catch(err) {
     console.error('Error fetching data:', err);
     isError.value= true;
